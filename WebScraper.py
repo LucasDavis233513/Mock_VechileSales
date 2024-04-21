@@ -11,6 +11,11 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 
+# Used for the explicit wait
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common import NoSuchElementException, TimeoutException
+
 # Webdriver options, used to specify the headless arguemnt (used so the browsers don't open)
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -23,15 +28,9 @@ from retrying import retry
 
 import base64
 import io
-from PIL import Image
 
-import time
-
-class WebScraper():
-    """
-    WebScrapper is used to scrap amazon for the price of the first item it finds from the webstore 
-    """
-    def __init__(self, browerName):
+class Scraper():
+    def __init__(self, browerName: str):
         """
         Initializes the webscrapper by creating the driver. The driver will only be created once.
         And will remain open until the closeDriver operation is called.
@@ -43,7 +42,6 @@ class WebScraper():
         """
         self.driver = self.__check_browser(browerName)
 
-    @retry(wait_exponential_multiplier = 1000, wait_exponential_max = 10000, stop_max_attempt_number = 3)
     def __check_browser(self, browserName: str):
         """
         Checks the browser passed durning initialization and creates a driver for the given browser if it is
@@ -62,7 +60,8 @@ class WebScraper():
             else:
                 return None # Return None if firefox or chrome wasn't found
 
-            options.add_argument("--headless")  # Run in headless mode (browser doesn't open)
+            options.add_argument("--headless")                  # Run in headless mode (browser doesn't open)
+
             driver = webdriver.Firefox(service=s, options=options) if browserName.lower() == "firefox" else webdriver.Chrome(service=s, options=options)
             
             return driver
@@ -72,18 +71,37 @@ class WebScraper():
     
     @retry(wait_exponential_multiplier = 1000, wait_exponential_max = 10000, stop_max_attempt_number = 3)
     def __findImage(self):
-        time.sleep(1)
+        '''
+        Find the source of the first image on google images
 
-        first_result = self.driver.find_element(By.XPATH, '//div[@jsData]//img[starts-with(@id, "dimg_")]')
-        image_url = first_result.get_attribute('src')
+        Looking for an img tag under this xpath:
+            /html/body/div[5]/div/div[6]/div[9]/div/div[2]/div[2]/div/div /div/div/div[1]/div/div/div[1]/div[2]/h3/a/div/div/div/g-img/img
+        '''
+        try:
+            errors = [NoSuchElementException, TimeoutException]
+            wait = WebDriverWait(self.driver, timeout = 10, poll_frequency = .2, ignored_exceptions = errors)
 
-        image_data = io.BytesIO(base64.b64decode(image_url.split(',')[1]))
+            # Explicitly wait until the page is loaded.
+            wait.until(EC.presence_of_element_located((By.XPATH, '//div[@jsData]')))
 
-        return image_data
+            # Explicitly wait until the images are visible.
+            wait.until(EC.visibility_of_element_located((By.XPATH, '//div[@jsData]//img[starts-with(@id, "dimg_")]')))
 
-    def setItemToSearch(self, item: str) -> None:
+            # Scrap the source of the first result from the search query
+            first_result = self.driver.find_element(By.XPATH, '//div[@jsData]//img[starts-with(@id, "dimg_")]')
+            image_url = first_result.get_attribute('src')
+
+            image_data = io.BytesIO(base64.b64decode(image_url.split(',')[1]))
+
+            return image_data
+        except TimeoutException:
+            return None
+        except ConnectionError:
+            return None
+
+    def setSearchQuery(self, item: str) -> None:
         """
-        Sets the http address with the desired item to search
+        Sets the search query into a URL for google images
 
         Parameter:
         item: the name of the item that you would like to search
@@ -97,10 +115,9 @@ class WebScraper():
         if(self.driver):
             self.driver.quit()
 
-    @retry(wait_exponential_multiplier = 1000, wait_exponential_max = 10000, stop_max_attempt_number = 3)
-    def getWebpage(self):
+    def getData(self):
         """
-        Calls the driver to get the requested webpage for a particular item and returns its price
+        Gets the webpage of the search query and returns the requested data
         """
         self.driver.get(self.URL)
         return self.__findImage()

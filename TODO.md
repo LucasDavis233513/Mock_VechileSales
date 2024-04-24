@@ -1,4 +1,6 @@
 <h1>TO-DO<h1>
+    - Look at how to handle the error in the root of the final project directory
+    - Add the browser to the config file and rename
     - Set up the tkinter window with six rows
         a tool bar / navigation bar at the top of the screen
             Search bar and account / login button

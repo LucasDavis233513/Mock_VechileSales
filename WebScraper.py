@@ -29,8 +29,10 @@ from retrying import retry
 import base64
 import io
 
+from Grab_Ini import ini
+
 class Scraper():
-    def __init__(self, browerName: str):
+    def __init__(self):
         """
         Initializes the webscrapper by creating the driver. The driver will only be created once.
         And will remain open until the closeDriver operation is called.
@@ -40,7 +42,8 @@ class Scraper():
         This scraper only supports the firefox and chrome browsers. Will return
         None if an unsupported browser is passed.
         """
-        self.driver = self.__check_browser(browerName)
+        browser = ini().grabInfo("config.ini", "browser_settings")
+        self.driver = self.__check_browser(browser['name'])
 
     def __check_browser(self, browserName: str):
         """
@@ -96,7 +99,8 @@ class Scraper():
             return image_data
         except TimeoutException:
             return None
-        except ConnectionError:
+        except Exception as e:
+            print(e)
             return None
 
     def setSearchQuery(self, item: str) -> None:

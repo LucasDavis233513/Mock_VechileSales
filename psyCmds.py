@@ -17,14 +17,20 @@ class Receiver():
         self.conn = _connection
         self.curr = _cursor
 
-    def displayTable_action(self, _where: str) -> list:
+    def displayTable_action(self, _where: str, _opAct: str) -> list:
         """
         Display a complete table
         """
         try:
-            self.curr.execute(f"""
-                SELECT * FROM {_where}
-            """)
+            if _opAct is None:
+                self.curr.execute(f"""
+                    SELECT * FROM {_where}
+                """)
+            else:
+                self.curr.execute(f"""
+                    SELECT * FROM {_where} {_opAct}
+                """)
+
             table = self.curr.fetchall()
 
             return table
@@ -188,27 +194,29 @@ class Invoke():
     def setCMD(self, _command: Command) -> None:
         self.cmd = _command
 
-    def exCMD(self) -> str:
+    def exCMD(self):
         return self.cmd.execute()
     
 class displayTable(Command):
     """
     Diplay a complete table
 
-    SELECT * FROM _
+    SELECT * FROM _ <optionalAction>
 
     Parameters:
         receiver:
         where: Used to query the correct table
+        optionalAction: Defines an optional action that can be preformed on the table
 
     Returns a list of tuples on success, returns empty list on fail
     """
-    def __init__(self, receiver: Receiver, where: str) -> None:
+    def __init__(self, receiver: Receiver, where: str, optionalAction: str) -> None:
         self._receiver = receiver
         self._where = where
+        self._opAct = optionalAction
     
     def execute(self) -> list:
-        return self._receiver.displayTable_action(self._where)
+        return self._receiver.displayTable_action(self._where, self._opAct)
     
 class displayTuple(Command):
     """

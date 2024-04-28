@@ -48,9 +48,8 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
               columnspan = 2, rowspan = 2, padx = 3, pady = 3)
         
         Label(root, text = search_queries[i]).grid(row = y, column = 2)
-        Label(root, text = "Details").grid(row = y + 1, column = 2)
 
-        Button(root, text = "View Details").grid(row = y, column = 3)
+        Button(root, text = "Details").grid(row = y, column = 3)
         
         y += 2
 

@@ -17,18 +17,26 @@ class Receiver():
         self.conn = _connection
         self.curr = _cursor
 
-    def displayTable_action(self, _where: str, _opAct: str) -> list:
+    def displayTable_action(self, _where: str, _searchQuery: str, _opAct: str) -> list:
         """
         Display a complete table
         """
         try:
-            if _opAct is None:
+            if _opAct == None and _searchQuery == None:
                 self.curr.execute(f"""
                     SELECT * FROM {_where}
                 """)
-            else:
+            elif _opAct != None and _searchQuery == None:
                 self.curr.execute(f"""
                     SELECT * FROM {_where} {_opAct}
+                """)
+            elif _opAct == None and _searchQuery != None:
+                self.curr.execute(f"""
+                    SELECT * FROM {_where} WHERE {_searchQuery}
+                """)
+            else:
+                self.curr.execute(f"""
+                    SELECT * FROM {_where} WHERE {_searchQuery} {_opAct}
                 """)
 
             table = self.curr.fetchall()
@@ -37,70 +45,37 @@ class Receiver():
         except psycopg2.Error as ex:
             print(ex)
             return None
-        
-    def displayTuple_action(self, _where: str, _search: str, _searchItem: str) -> list:
-        """
-        Display specific tuples
-        """
-        try:
-            self.curr.execute(f"""
-                SELECT *
-                FROM {_where}
-                WHERE {_search} = '{_searchItem}'
-            """)
-            tuples = self.curr.fetchall()
- 
-            return tuples
-        except psycopg2.Error as ex:
-            print(ex)
-            return None
 
-    def find_action(self, _what: str, _where: str, _search: str, _searchItem: str, _opAct: str) -> str:
+    def find_action(self, _what: str, _where: str, _searchQuery: str, _opAct: str) -> str:
         """
         Find information on a specific value
         """
         try:
-            if _opAct == None:
+
+            if _searchQuery == None and _opAct == None:
                 self.curr.execute(f"""
                     SELECT {_what}
                     FROM {_where}
-                    where {_search} = '{_searchItem}'
                 """)
-            elif _search == None and _searchItem == None:
+            elif _searchQuery == None and _opAct != None:
                 self.curr.execute(f"""
                     SELECT {_opAct}({_what})
                     FROM {_where}
                 """)
-            elif _search == None and _searchItem == None and _opAct == None:
+            elif _searchQuery != None and _opAct == None:
                 self.curr.execute(f"""
                     SELECT {_what}
                     FROM {_where}
-                """)                
+                    WHERE {_searchQuery}
+                """)
             else:
                 self.curr.execute(f"""
                     SELECT {_opAct}({_what})
                     FROM {_where}
-                    where {_search} = '{_searchItem}'
-                """)
+                    where {_searchQuery}
+                """)                
 
-            item = self.curr.fetchone()[0]
-
-            return item
-        except psycopg2.Error as ex:
-            print(ex)
-            return "Error"
-    
-    def findContains_action(self, _what: str, _where: str, _search: str, _searchItem: str) -> str:
-        """
-        Find information from a record that contains the searchItem
-        """
-        try:
-            self.curr.execute(f"""
-                SELECT {_what}
-                FROM {_where}
-                WHERE {_search} LIKE '%{_searchItem}%'
-            """)
-            item = self.curr.fetchone()[0]
+            item = self.curr.fetchall()
 
             return item
         except psycopg2.Error as ex:
@@ -122,14 +97,14 @@ class Receiver():
             print(ex)
             return "Error"
     
-    def remove_action(self, _where: str, _search: str, _searchItem: str) -> str:
+    def remove_action(self, _where: str, _searchQuery: str) -> str:
         """
         Remove a tuple 
         """
         try:
             self.curr.execute(f"""
                 DELETE FROM {_where}
-                WHERE {_search} = '{_searchItem}'
+                WHERE {_searchQuery}
             """)
             self.conn.commit()
 
@@ -158,32 +133,6 @@ class Receiver():
         except psycopg2.Error as ex:
             print(ex)
             return "Error"
-        
-    def nutrientData_action(self, _searchItem: str) -> list:
-        try:
-            self.curr.execute(f"""
-                select sum(protien_value) as protien_total, sum(fat_value) as fat_total, sum(carbohydrate_value) as carbohydrate_total
-                from nutrientData
-                where nutrientData_id in (
-                    select nutrientData_id
-                    from Foods_nutrientData
-                    where fdc_id in (
-                        select fdc_id
-                        from Foods_userLogs
-                        where log_id in (
-                            select log_id
-                            from userLogs
-                            where logDate = '{_searchItem}'
-                        )
-                    )
-                )
-            """)
-            tuples = self.curr.fetchall()
-
-            return tuples
-        except psycopg2.Error as ex:
-            print(ex)
-            return None
 
 class Invoke():
     """
@@ -201,7 +150,7 @@ class displayTable(Command):
     """
     Diplay a complete table
 
-    SELECT * FROM _ <optionalAction>
+    SELECT * FROM _ <WHERE searchQuery> <optionalAction>
 
     Parameters:
         receiver:
@@ -210,89 +159,40 @@ class displayTable(Command):
 
     Returns a list of tuples on success, returns empty list on fail
     """
-    def __init__(self, receiver: Receiver, where: str, optionalAction: str) -> None:
+    def __init__(self, receiver: Receiver, where: str, searchQuery: str = None, optionalAction: str = None) -> None:
         self._receiver = receiver
         self._where = where
+        self._searchQuery = searchQuery
         self._opAct = optionalAction
     
     def execute(self) -> list:
-        return self._receiver.displayTable_action(self._where, self._opAct)
-    
-class displayTuple(Command):
-    """
-    Display a list of tuples from a search query
-
-    SELECT * FROM _ WHERRE _ = '_'
-
-    Parameters:
-        - reciever
-        - where: Used to query the correct table
-        - search: Used to find a specific tuple
-        - searchItem: The item you are searching by
-
-    returns a list of tuples from a search on success, returns empty list on fail
-    """
-    def __init__(self, reciever: Receiver, where: str, search: str, searchItem: str) -> None:
-        self._receiver = reciever
-        self._where = where
-        self._search = search
-        self._searchItem = searchItem
-
-    def execute(self) -> list:
-        return self._receiver.displayTuple_action(self._where, self._search, self._searchItem)
+        return self._receiver.displayTable_action(self._where, self._searchQuery, self._opAct)
 
 class findValue(Command):
     """
     Find specific information from the database
 
-    SELECT <optionalAction> _ FORM _ WHERE _ = '_'
+    SELECT <optionalAction> _ FORM _ <WHERE searchQuery>
 
     Parameters:
         - receiver
         - what: Used to find the desired entry form the tuple
         - where: Used to query the correct table
-        - search: Used to find a specific tuple
-        - searchItem: The item you are searching by
+        - searchQuery: 
         - optionalAction: Defines an optional action to preform on the data found in the query
                         For example, preforming a SUM or MAX operation on the data
 
     Returns the request item on success, the string 'Error' on fail
     """
-    def __init__(self, receiver: Receiver, what: str, where: str, search: str, searchItem: str, optionalAction: str) -> None:
+    def __init__(self, receiver: Receiver, what: str, where: str, searchQuery:str = None, optionalAction: str = None) -> None:
         self._receiver = receiver
         self._what = what
         self._where = where
-        self._search = search
-        self._searchItem = searchItem
+        self._searchQuery = searchQuery
         self._opAct = optionalAction
 
     def execute(self) -> str:
-        return self._receiver.find_action(self._what, self._where, self._search, self._searchItem, self._opAct)
-
-class findContains(Command):
-    """
-    Used to find a value based of a record that contains a specified value
-
-    SELECT _ FROM _ WHERE _ LIKE '%_%'
-
-    Parameters:
-        - receiver
-        - what: Used to find the desired entry form the tuple
-        - where: Used to query the correct table
-        - search: Used to find a specific tuple
-        - searchItem: The item you are searching by
-
-    Returns the requested item on success, the string 'Error' on fail
-    """
-    def __init__(self, receiver: Receiver, what: str, where: str, search: str, searchItem: str) -> None:
-        self._receiver = receiver
-        self._what = what
-        self._where = where
-        self._search = search
-        self._searchItem = searchItem
-
-    def execute(self) -> str:
-        return self._receiver.findContains_action(self._what, self._where, self._search, self._searchItem)
+        return self._receiver.find_action(self._what, self._where, self._searchQuery, self._opAct)
 
 class insertData(Command):
     """
@@ -319,24 +219,22 @@ class removeData(Command):
     """
     Used to remove a specified record
 
-    DELETE FROM _ WHERE _ = '_'
+    DELETE FROM _ WHERE _
 
     Parameters:
         - receiver
         - where: Used to query the correct table
-        - search: Used to find a specific tuple
-        - searchItem: The item you are searching by
+        - searchQuery:
 
     Returns None on success, the string 'Error' on fail
     """
-    def __init__(self, receiver: Receiver, where: str, search: str, searchItem: str) -> None:
+    def __init__(self, receiver: Receiver, where: str, searchQuery: str) -> None:
         self._receiver = receiver
         self._where = where
-        self._search = search
-        self._searchItem = searchItem
+        self._searchQuery = searchQuery
 
     def execute(self) -> str:
-        return self._receiver.remove_action(self._where, self._search, self._searchItem)
+        return self._receiver.remove_action(self._where, self._searchQuery)
     
 class updateData(Command):
     """
@@ -362,36 +260,3 @@ class updateData(Command):
 
     def execute(self) -> str:
         return self._receiver.update_action(self._what, self._values, self._search, self._searchItem)
-    
-class nutrientData(Command):
-    """
-    Used to find the nutrient information for a given table
-
-    select sum(protien_value) as protien_total, sum(fat_value) as fat_total, sum(carbohydrate_value) as carbohydrate_total
-    from nutrientData
-    where nutrientData_id in (
-        select nutrientData_id
-        from Foods_nutrientData
-        where fdc_id in (
-            select fdc_id
-            from Foods_userLogs
-            where log_id in (
-                select log_id
-                from userLogs
-                where logDate = '_'
-            )
-        )
-    )
-
-    Parameters:
-        - reciever
-        - searchItem: The item you are searching by
-
-    returns a list of tuples on success, None on fail
-    """
-    def __init__(self, receiver: Receiver, searchItem: str) -> None:
-        self._receiver = receiver
-        self._searchItem = searchItem
-
-    def execute(self) -> list:
-        return self._receiver.nutrientData_action(self._searchItem)

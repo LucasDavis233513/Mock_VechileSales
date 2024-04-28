@@ -1,24 +1,11 @@
 from selenium import webdriver
-
-# The following imports are used for the API to scrap Amazon
-# Webdrivers for the firefox browser
-from selenium.webdriver.firefox.service import Service
-from webdriver_manager.firefox import GeckoDriverManager
-from selenium.webdriver.common.by import By
-
-# Webdrivers for the chrome browser
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 
 # Used for the explicit wait
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common import NoSuchElementException, TimeoutException
-
-# Webdriver options, used to specify the headless arguemnt (used so the browsers don't open)
-from selenium.webdriver.firefox.options import Options as FirefoxOptions
-from selenium.webdriver.chrome.options import Options as ChromeOptions
 
 # Used to interpret the exception thrown from the WebDriver
 from selenium.common.exceptions import WebDriverException
@@ -29,48 +16,29 @@ from retrying import retry
 import base64
 import io
 
-from Grab_Ini import ini
-
 class Scraper():
     def __init__(self):
         """
         Initializes the webscrapper by creating the driver. The driver will only be created once.
         And will remain open until the closeDriver operation is called.
-
-        Parameter:
-        browserName: the name of the browser you would like to use for the scrapper
-        This scraper only supports the firefox and chrome browsers. Will return
-        None if an unsupported browser is passed.
         """
-        browser = ini().grabInfo("config.ini", "browser_settings")
-        self.driver = self.__check_browser(browser['name'])
+        self.driver = self.__check_browser()
 
-    def __check_browser(self, browserName: str):
+    @retry(wait_exponential_multiplier = 1000, wait_exponential_max = 10000, stop_max_attempt_number = 3)
+    def __check_browser(self):
         """
         Checks the browser passed durning initialization and creates a driver for the given browser if it is
         supported.
-
-        Parameter:
-        browserName: The name of the browser you would like to use
         """
         try:
-            if(browserName.lower() == "firefox"):
-                s = Service(GeckoDriverManager().install())
-                options = FirefoxOptions()
-            elif(browserName.lower() == "chrome"):
-                s = Service(ChromeDriverManager().install())
-                options = ChromeOptions()
-            else:
-                return None # Return None if firefox or chrome wasn't found
-
-            options.add_argument("--headless")                  # Run in headless mode (browser doesn't open)
-
-            driver = webdriver.Firefox(service=s, options=options) if browserName.lower() == "firefox" else webdriver.Chrome(service=s, options=options)
+            # s = Service(ChromeDriverManager().install())
+            options = webdriver.ChromeOptions()
+            driver = uc.Chrome(headless = True, options = options)
             
             return driver
         except WebDriverException as e:
-            print(f"Error occurred: {e}") # Return error if there was an error opening the browser
-            return None
+            print(f"Error occurred: {e}")
+            raise
     
     @retry(wait_exponential_multiplier = 1000, wait_exponential_max = 10000, stop_max_attempt_number = 3)
     def __findImage(self):

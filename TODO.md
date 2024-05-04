@@ -1,10 +1,11 @@
 <h1>TO-DO<h1>
-    - Create a model that interacts with the database using the psycmd library
-    - Create the controller that will handel the interactions between the user and the database
-    - Set up the tkinter window with six rows
-        a tool bar / navigation bar at the top of the screen
-            Search bar and account / login button
-        five rows for each vechile
-            image on the left
-            general vechile information in the middle
-            and a button to veiw more details about a vechile including an option to buy
+    - Implement a threaded process to allow images to be retrived as a backgroud process.
+    - Implement an input buffer
+        - Have an array of images that is being filled by the background process
+
+    - Add user accounts
+        - Ability to login to a user
+        - Add a method to remove a user
+            - if a user is removed / disabled, update a specific entry in that users entry on the user table
+    - Add payment functionalilty
+        - Collect payment informaiton for a user / Cannot purchase without being logged in

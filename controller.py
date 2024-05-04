@@ -4,6 +4,10 @@ import concurrent.futures
 
 import re as regex
 
+import random
+
+PROGRAMMER_NAME = "Lucas Davis"
+
 class Controller:
     def __init__(self, model, view) -> None:
         self.model = model
@@ -11,7 +15,6 @@ class Controller:
         self.view.setController(self)
 
         self.images = []            # Used to keep a reference of each image
-        self.table = []
 
         self.updateView()
 
@@ -26,14 +29,13 @@ class Controller:
         scraper = Scraper()
         scraper.setSearchQuery(query)       # Set the query to the Scraper
         
-        while count != 3:
+        while count != 2:
             data = scraper.getData()        # Attempt to grab the image bytes
 
             if data is not None:
                 image = Image.open(data)
                 scraper.closeDriver()
 
-                # Update the progess bar
                 return image.resize((150, 100))
             
             count += 1
@@ -42,7 +44,6 @@ class Controller:
         image = Image.new("RGB", (150, 100), (0, 0, 0))
         scraper.closeDriver()          # Close the WebScraper instance
 
-        # Update the progress bar
         return image
     
     def __ExtractNRemove(self, _lst: list, _indToExt: list) -> list:
@@ -66,8 +67,17 @@ class Controller:
             newLst.append(new)
 
         return extLst, newLst
-
-    def updateView(self):
+    
+    def findInfo(self, id: str, name: str) -> list:
+        """
+        Used to find the information about a particular id
+        """
+        if name == "Seller":
+            return self.model.fetchSeller(id)
+        elif name == "Detail":
+            return self.model.fetchDetails(id)
+        
+    def updateView(self) -> None:
         """
         Update the mainView with entries from the database
 
@@ -79,18 +89,17 @@ class Controller:
             following the same notation for each of the buttons, but instead with this results list.
             If the search field is cleared it needs to return to the default of querying the database.
         """
-        # If the table list is empty, run the default method
-        #   We need to break the detail, seller, and car id's off of each tuple (should be indecies 0, 5, 6)
-        if not self.table:
+        # If the car_ids var is an empty list, call the fetchVechiles method of the model
+        if self.model.car_ids == []:
             rltList = self.model.fetchVechiles(self.view.next, self.view.prev)
 
-            # Reset the next and prev variables 
-            self.view.next = False
-            self.view.prev = False
+        # else, call the searchNav method
+        else:
+            rltList = self.model.searchNav(self.view.next, self.view.prev)
 
-        # # If the table list has entries, use it to display the entries instead of querying the database
-        # else:
-        #     rltList = self.table
+        # Reset the next and prev variables 
+        self.view.next = False
+        self.view.prev = False
 
         indToExt = [0, 5, 6]
         search = []
@@ -100,22 +109,19 @@ class Controller:
         # Extract the make model and year and concatenate them to a single string
         #   This will be used as our query for the getImage operation
         for item in self.Values:
-            query = f"{item[0]}" + f" {item[1]}" + f" {item[2]}"
+            query = f"{item[0]} {item[1]} {item[2]}"
             search.append(query)
 
         self.grabImages(search)
 
         # Call the update method from the view to place the values (list of tuples) and Images (list of images)
         #   onto the MainView subframe
-        self.view.updateMainView(self.Values, self.images)
+        self.view.updateMainView(self.Values, self.images, self.Ids)
 
     def search(self, query: str) -> None:
-        # If the query is blank, clear the table list
-        if query is "":
-            self.table.clear()
-            self.updateView()
-            return
-
+        """
+        Break a given query into one or more values for make, model, and/or year.
+        """
         qryDict = {}
         
         if query.count(' ') == 2:
@@ -133,8 +139,7 @@ class Controller:
             tempChar = regex.findall(r'[A-Za-z]*', query)
             qryDict["make"] = ''.join(tempChar)
 
-        # Append the search results
-        self.table.append(self.model.search(**qryDict))
+        self.model.search(**qryDict)
         self.updateView()
 
     def grabImages(self, search_queries: list) -> None:
@@ -146,6 +151,7 @@ class Controller:
         """
         # Ensure that the images list is empty before adding new images
         self.images.clear()
+        self.view.createProgressBar()
 
         # Create a pool of worker threads
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -153,7 +159,40 @@ class Controller:
             #   the worker threads will then perform the requested work
             future_images = [executor.submit(self.__updateImage, query) for query in search_queries]
 
-            for image in future_images:
+            for x, image in enumerate(future_images):
+                progressValue = ((x + 1) / len(future_images)) * 100
+                self.view.progressBar["value"] = progressValue
+                self.view.update()
+
                 image = image.result()                  # Wait until the worker threads have returned with the results from __updateImage
                 tk_image = ImageTk.PhotoImage(image)    # Create a Tk image from the results
                 self.images.append(tk_image)            # append that Tk image to the images list
+
+        # Ensure the progress bar reaches 100
+        self.view.progressBar["value"] = 100
+        self.view.update()
+
+        self.view.progressWindow.destroy()
+
+    def createUser(self, _info: dict) -> None:
+        """
+        def insert(self, table: str, values: tuple) -> None:
+        """
+        if _info is None:
+            self.view.messageDialog("Failed to create user")
+            return
+        
+        usrID = random.randint(10000,1000000)   # Generate a userID
+        check = self.model.checkVal(str(usrID)) # Check if that ID is already in use
+
+        # If it is, continue to generate and check until check is false
+        while check is True:
+            usrID = random.randint(10000,1000000)
+            check = self.model.checkVal(str(usrID))
+
+        # Create a tuple containing all the account information and the userID
+        Account = tuple([str(usrID)] + list(_info.values()))
+
+        self.model.insert("Users", Account)
+        
+        self.view.messageDialog("User created successfully")

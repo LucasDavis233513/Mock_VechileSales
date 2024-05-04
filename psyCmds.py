@@ -1,6 +1,8 @@
 import psycopg2
 from abc import ABC, abstractmethod
 
+PROGRAMMER_NAME = "Lucas Davis"
+
 class Command(ABC):
     """
     Command interface declares a method for executing a command
@@ -133,6 +135,23 @@ class Receiver():
         except psycopg2.Error as ex:
             print(ex)
             return "Error"
+        
+    def exists_Action(self, _where: str, _searchQuery: str) -> bool:
+        """
+        checks to see if a value exists
+        """
+        self.curr.execute(f"""
+            SELECT *
+            FROM {_where}
+            WHERE {_searchQuery}
+        """)
+
+        # If the value wasn't found
+        if self.curr.fetchall() == []:
+            return False
+        
+        # If the value exists
+        return True
 
 class Invoke():
     """
@@ -260,3 +279,24 @@ class updateData(Command):
 
     def execute(self) -> str:
         return self._receiver.update_action(self._what, self._values, self._search, self._searchItem)
+    
+class exists(Command):
+    """
+    Used to check if a value exists within the database
+
+    SELECT * FROM _ WHERE _
+
+    Parameters:
+        - receiver
+        - where:
+        - searchQuery:
+
+    returns True if the value exists, False if it doesn't
+    """
+    def __init__(self, receiver: Receiver, where: str, searchQuery: str) -> None:
+        self._receiver = receiver
+        self._where = where
+        self._searchQuery = searchQuery
+
+    def execute(self) -> bool:
+        return self._receiver.exists_Action(self._where, self._searchQuery)

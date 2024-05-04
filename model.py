@@ -2,6 +2,9 @@ import psycopg2
 import re as regex
 import psyCmds as cd
 from Grab_Ini import ini
+from itertools import islice
+
+PROGRAMMER_NAME = "Lucas Davis"
 
 class Model:
     def __init__(self) -> None:
@@ -19,16 +22,16 @@ class Model:
             self.invoker = cd.Invoke()
             self.receiver = cd.Receiver(self.conn, self.curr)
 
-            print("Connected to the database 'vechile_sales' successfully")
+            self.car_ids = []
+            self.itrLimit = 5
         except:
-            print("Couldn't connecto the database...\n")
+            print("Couldn't connect to the database...\n")
             exit()
     
     def closeConnection(self) -> None:
         """
         Close the connection to the database
         """
-        print("Closing connection to the Database...")
         self.conn.close()
 
     def fetchVechiles(self, next = False, previous = False) -> list:
@@ -78,36 +81,65 @@ class Model:
 
         return table
 
+    def fetchSeller(self, sellerID: str) -> list:
+        """
+        
+        """
+        self.invoker.setCMD(cd.displayTable(self.receiver, "Seller", f"seller_id = {sellerID}"))
+        table = self.invoker.exCMD()
+
+        return table
+
     def search(self, make: str, model: str = "", year: str = "") -> None:
         """
         Search the database given vechile by make, model, or year
 
         returns a list of tuples
         """
+        if make == "":
+            self.car_ids.clear()
+            return
+
+        # Grab the list of car_ids that matches the given search items
         self.invoker.setCMD(cd.findValue(self.receiver, "car_id", "Cars", f"(make::text like '%{make}%' and model::text like '%{model}%' and year::text like '%{year}%')"))
-        car_ids = self.invoker.exCMD()
+        self.car_ids = self.invoker.exCMD()
+    
+    def searchNav(self, next: bool = False, previous: bool = False) -> list:
+        """
+        This function will be called after the search. It job is to iterate through the self.car_ids var that repersents the results of the search.
+        By default, if the next and previous buttons weren't pressed. it will display the first five elements.
+        If next is pressed it will iterate over the next five. If previous is pressed it will iterate over the previous five.
+        """
+        self.table.clear()
 
-        table = []
+        if next == True and previous == False:
+            self.itrLimit += 5
+            
+        elif next == False and previous == True:
+            self.itrLimit = max(5, self.itrLimit - 5)
 
-        for item in car_ids:
+        for item in islice(self.car_ids, int(max(0, self.itrLimit - 5)), int(min(self.itrLimit, len(self.car_ids) - 1))):
             self.invoker.setCMD(cd.displayTable(self.receiver, "Cars", f"car_id = {item[0]}"))
-            table.append(self.invoker.exCMD()[0])
-
-        print(table)
+            self.table.append(self.invoker.exCMD()[0])
+        
+        return self.table
 
     def insert(self, table: str, values: tuple) -> None:
         """
-        
+        Insert values into a given table
         """
         self.invoker.setCMD(cd.insertData(self.receiver, table, values))
         self.invoker.exCMD()
+    
+    def checkVal(self, val: str) -> bool:
+        """
+        Check if a userID exits in the Users table
+        """
+        self.invoker.setCMD(cd.exists(self.receiver, "Users", f"user_id = {val}"))
+        return self.invoker.exCMD()
 
     def remove(self, table: str):
         pass
 
     def update(self):
         pass
-
-test = Model()
-
-test.closeConnection()

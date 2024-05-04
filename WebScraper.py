@@ -1,6 +1,10 @@
 from selenium import webdriver
-import undetected_chromedriver as uc
+# import undetected_chromedriver as uc
+
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
+
 
 # Used for the explicit wait
 from selenium.webdriver.support.wait import WebDriverWait
@@ -16,6 +20,8 @@ from retrying import retry
 import base64
 import io
 
+PROGRAMMER_NAME = "Lucas Davis"
+
 class Scraper():
     def __init__(self):
         """
@@ -24,16 +30,22 @@ class Scraper():
         """
         self.driver = self.__check_browser()
 
-    @retry(wait_exponential_multiplier = 1000, wait_exponential_max = 10000, stop_max_attempt_number = 3)
     def __check_browser(self):
         """
-        Checks the browser passed durning initialization and creates a driver for the given browser if it is
-        supported.
         """
         try:
-            # s = Service(ChromeDriverManager().install())
+            s = Service(ChromeDriverManager().install())
+
             options = webdriver.ChromeOptions()
-            driver = uc.Chrome(headless = True, options = options)
+            options.add_experimental_option(     # Block image from rendering
+                "prefs", {
+                    "profile.managed_default_content_settings.images": 2,
+                }
+            )
+            options.add_argument("--headless")   # Block the broswer from launching windows
+            options.add_argument('--no-sandbox')
+
+            driver = webdriver.Chrome(service = s, options = options)
             
             return driver
         except WebDriverException as e:
@@ -54,9 +66,6 @@ class Scraper():
 
             # Explicitly wait until the page is loaded.
             wait.until(EC.presence_of_element_located((By.XPATH, '//div[@jsData]')))
-
-            # Explicitly wait until the images are visible.
-            wait.until(EC.visibility_of_element_located((By.XPATH, '//div[@jsData]//img[starts-with(@id, "dimg_")]')))
 
             # Scrap the source of the first result from the search query
             first_result = self.driver.find_element(By.XPATH, '//div[@jsData]//img[starts-with(@id, "dimg_")]')

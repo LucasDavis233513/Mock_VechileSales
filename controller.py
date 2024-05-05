@@ -5,6 +5,7 @@ import concurrent.futures
 import re as regex
 
 import random
+from datetime import datetime
 
 PROGRAMMER_NAME = "Lucas Davis"
 
@@ -15,6 +16,7 @@ class Controller:
         self.view.setController(self)
 
         self.images = []            # Used to keep a reference of each image
+        self.usrID = None
 
         self.updateView()
 
@@ -174,6 +176,22 @@ class Controller:
 
         self.view.progressWindow.destroy()
 
+    def fetchUsrInfo(self) -> None:
+        """
+        
+        """
+        # Fetch the users information form the Users table
+        usrInfo = self.model.fetchUser(self.usrID)[0]
+        keys = ('user_id', 'username', 'password', 'email', 'city', 'state', 'zip_code', 'active')
+
+        # Convert the tuple into a dictionary
+        resultDictionary = {keys[i] : usrInfo[i] for i, _ in enumerate(keys)}
+
+        resultDictionary.pop('user_id')
+        resultDictionary.pop('active')
+
+        self.view.userInfo = resultDictionary
+
     def createUser(self, _info: dict) -> None:
         """
         def insert(self, table: str, values: tuple) -> None:
@@ -182,17 +200,92 @@ class Controller:
             self.view.messageDialog("Failed to create user")
             return
         
-        usrID = random.randint(10000,1000000)   # Generate a userID
-        check = self.model.checkVal(str(usrID)) # Check if that ID is already in use
+        while True:
+            usrID = random.randint(10000, 1000000)  # Generate a userID
 
-        # If it is, continue to generate and check until check is false
-        while check is True:
-            usrID = random.randint(10000,1000000)
-            check = self.model.checkVal(str(usrID))
+            if not self.model.checkVal("Users", str(usrID), "user_id"): # Check if that ID is already in use
+                break
 
         # Create a tuple containing all the account information and the userID
-        Account = tuple([str(usrID)] + list(_info.values()))
+        Account = tuple([str(usrID)] + list(_info.values()) + [True])
 
         self.model.insert("Users", Account)
-        
+
         self.view.messageDialog("User created successfully")
+
+    def login(self, usrInfo: dict) -> None:
+        """
+        log in a specific user given a dictionary of their username and password
+
+        Parameter:
+            - usrInfo: A dictionary of the users username and password
+
+        returns if the provided username or password wasn't collected or if they don't
+        exist in the database
+        """
+        # Check if we successfully collected the information from the user
+        if usrInfo is None:
+            self.view.messageDialog("Failed to grab username or password.")
+            return
+
+        # Check if the username and password exist in the database
+        for field in ['username', 'password']:
+            if not self.model.checkVal("Users", usrInfo[field], field):
+                self.view.messageDialog("Username or password is incorrect")
+                return
+
+        self.usrID = self.model.findUsrID(usrInfo['username'])
+        self.view.signedIN = True
+        self.view.messageDialog("Logged in successfully")
+
+    def removeUsr(self) -> None:
+        """
+        Attempt to remove a users account. If a user had made any purchases, their account will
+        simply be deactivated.
+        """
+        if self.usrID is None:
+            self.view.messageDialog("There was a problem deleting the current user")
+            return
+        elif self.model.remove(self.usrID) == "Error":
+            self.view.messageDialog("Failed to remove the user")
+            return
+        
+        self.view.messageDialog("The current user was successfully removed")
+
+    def updateInfo(self, newInfo: dict) -> None:
+        """
+        Update a users account based on the new information from the newInfo dictionary
+        """
+        for key, val in newInfo.items():
+            check = self.model.update(self.usrID, key, val)
+
+            if check == "Error":
+                self.view.messageDialog("Failed to update Account information")
+                break
+        
+        self.view.messageDialog("Updated Account information successfully")
+
+    def makePurchase(self, carID: str) -> None:
+        """
+        Attempt to purchase a vechile
+
+        if the carID doesn't already exist in the Purchases table it will generate a new purchase ID
+        and append the current users ID, the car we are purchasesing and the current date
+        """
+        # Check if a vechile was already purchased
+        if self.model.checkVal("Purchases", carID, "car_id"):
+            self.view.messageDialog("This vechile is already pruchased")
+            return
+        
+        current_datetime = datetime.now()
+        formatted_datetime = current_datetime.strftime("%Y-%m-%d")
+
+        while True:
+            purchaseID = random.randint(1000000, 10000000)  # Generate a purchaseID
+
+            if not self.model.checkVal("Purchases", str(purchaseID), "purchase_id"): # Check if that ID is already in use
+                break
+
+        values = (purchaseID, self.usrID, carID, formatted_datetime)
+
+        self.model.insert("Purchases", values)

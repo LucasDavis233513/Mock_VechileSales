@@ -89,6 +89,21 @@ class Model:
         table = self.invoker.exCMD()
 
         return table
+    
+    def fetchUser(self, usrID: str) -> list:
+        """
+        
+        """
+        self.invoker.setCMD(cd.displayTable(self.receiver, "Users", f"user_id = '{usrID}'"))
+        table = self.invoker.exCMD()
+
+        return table
+    
+    def findUsrID(self, usrname: str) -> str:
+        self.invoker.setCMD(cd.findValue(self.receiver, "user_id", "Users", f"username = '{usrname}'"))
+        usrID = self.invoker.exCMD()[0][0]
+
+        return usrID
 
     def search(self, make: str, model: str = "", year: str = "") -> None:
         """
@@ -123,23 +138,40 @@ class Model:
             self.table.append(self.invoker.exCMD()[0])
         
         return self.table
-
+    
+    def checkVal(self, table: str, val: str, attr: str) -> bool:
+        """
+        Check if a userID exits in the Users table
+        """
+        self.invoker.setCMD(cd.exists(self.receiver, table, f"{attr} = '{val}'"))
+        return self.invoker.exCMD()
+    
     def insert(self, table: str, values: tuple) -> None:
         """
         Insert values into a given table
         """
         self.invoker.setCMD(cd.insertData(self.receiver, table, values))
         self.invoker.exCMD()
-    
-    def checkVal(self, val: str) -> bool:
+
+    def remove(self, ID: str):
         """
-        Check if a userID exits in the Users table
+        Remove a user based on the userID
+        update Users set active = False where user_id = <ID>;
         """
-        self.invoker.setCMD(cd.exists(self.receiver, "Users", f"user_id = {val}"))
+        # If the user exists in the Purchases table, we need to deactivate their account
+        # to keep a record of their purchase.
+        if self.checkVal("Purchases", ID, "user_id"):
+            self.invoker.setCMD(cd.updateData(self.receiver, "Users", "Active = False", f"user_id = '{ID}'"))
+
+        # Otherwise, if they haven't made any purchases, we can simply remove them.
+        else:
+            self.invoker.setCMD(cd.removeData(self.receiver, "Users", f"user_id = '{ID}'"))
+        
         return self.invoker.exCMD()
 
-    def remove(self, table: str):
-        pass
-
-    def update(self):
-        pass
+    def update(self, ID: str, attr: str, val: str) -> None:
+        """
+        Update a users information
+        """
+        self.invoker.setCMD(cd.updateData(self.receiver, "Users", f"{attr} = '{val}'", f"user_id = '{ID}'"))
+        self.invoker.exCMD()

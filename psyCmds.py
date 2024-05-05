@@ -108,6 +108,7 @@ class Receiver():
                 DELETE FROM {_where}
                 WHERE {_searchQuery}
             """)
+
             self.conn.commit()
 
             return None
@@ -115,21 +116,17 @@ class Receiver():
             print(ex)
             return "Error"
         
-    def update_action(self, _what: str, _values: list, _search: list, _searchItem: list) -> str:
+    def update_action(self, _what: str, _val: str, _searchQuery: str) -> str:
         """
         Update a list of tuples in a given table
         """
         try:
-            count = 0
-            for item in _values:
-                self.curr.execute(f"""
-                    UPDATE {_what}
-                    SET {item}
-                    WHERE {_search[0]} = '{_searchItem[count][0]}' AND {_search[1]} = {_searchItem[count][1]}
-                """)
-                self.conn.commit()
-
-                count += 1
+            self.curr.execute(f"""
+                UPDATE {_what}
+                SET {_val}
+                WHERE {_searchQuery}
+            """)
+            self.conn.commit()
             
             return None
         except psycopg2.Error as ex:
@@ -238,7 +235,7 @@ class removeData(Command):
     """
     Used to remove a specified record
 
-    DELETE FROM _ WHERE _
+    DELETE FROM _ WHERE _ <optionalAction>
 
     Parameters:
         - receiver
@@ -259,26 +256,24 @@ class updateData(Command):
     """
     Used to update a table
 
-    UPDATE _ SET _ WHERE _ = _ AND _ = _
+    UPDATE _ SET _ WHERE _
 
     Parameters:
         - receiver
         - what: Used to query the correct table
         - value: columnName = newEntry
-        - search: Used to find a specific tuple
-        - searchItem: The item you are searching by
+        - searchQuery:
 
     Returns None on success, the string 'Error' on fail
     """
-    def __init__(self, receiver: Receiver, what: str, value: list, search: list, searchItem: list) -> None:
+    def __init__(self, receiver: Receiver, what: str, value: str, searchQuery: str) -> None:
         self._receiver = receiver
         self._what = what
         self._values = value
-        self._search = search
-        self._searchItem = searchItem
+        self._searchQuery = searchQuery
 
     def execute(self) -> str:
-        return self._receiver.update_action(self._what, self._values, self._search, self._searchItem)
+        return self._receiver.update_action(self._what, self._values, self._searchQuery)
     
 class exists(Command):
     """

@@ -25,9 +25,9 @@ class View(ctk.CTk):
         self.title("Vechile Sales")
         self.geometry(resolution)
 
-        self.controller = None
-        self.userInfo = None
-        self.signedIN = None
+        self.controller = None                  # A reference to the controller
+        self.userInfo = None                    # A reference to user collected information
+        self.signedIN = None                    # A reference used to see if a user is currently logged in
 
         self.grid_rowconfigure(0, minsize = 5, weight = 1)
         self.grid_rowconfigure(1, minsize = 900, weight = 1)
@@ -103,13 +103,18 @@ class View(ctk.CTk):
         userAccounts Button event: Will create a drop down menu that will allow a user to login
         logout or create a new user
         """
-        menu = tk.Menu(self, tearoff=0)
+        menu = tk.Menu(self, tearoff = 0)
 
+        # If no one is signed in, display options to create or login to a user
         if self.signedIN is None:
-            menu.add_command(label="Create User", command=lambda: (self.entryDialog(), self.controller.createUser(self.userInfo)))
-            menu.add_command(label="Login", command=lambda: setattr(self, 'signedIN', True)) # Create a login function
+            menu.add_command(label = "Create User", command = lambda: (self.crtEntryDialog(['username', 'password', 'email', 'city', 'state', 'zip_code'], "Create User"), self.controller.createUser(self.userInfo)))
+            menu.add_command(label = "Login", command = lambda: (self.crtEntryDialog(['username', 'password'], "Login"), self.controller.login(self.userInfo)))
+        
+        # else if someone is signed in, display options to remove that users account or logout or to update that users information
         else:
-            menu.add_command(label="Logout", command=lambda: setattr(self, 'signedIN', None)) # Keep
+            menu.add_command(label = "Update User Information", command = lambda: (self.controller.fetchUsrInfo(), self.crtEntryDialog(['username', 'password', 'email', 'city', 'state', 'zip_code'], "Update Info", True), self.controller.updateInfo(self.userInfo)))
+            menu.add_command(label = "Delete Account", command = lambda: (self.controller.removeUsr(), setattr(self, 'signedIN', None)))
+            menu.add_command(label = "Logout", command = lambda: (setattr(self, 'signedIN', None)))
 
         menu.post(event.x_root, event.y_root)
 
@@ -238,8 +243,11 @@ class View(ctk.CTk):
 
         # Call the purchase functionality
         def on_purchase(_id):
-            print(_id)
-            pass
+            if not self.signedIN:
+                self.messageDialog("You must be signed in to make a purchase")
+                return
+            
+            self.controller.makePurchase(_id)
         
         # Back and previous buttons
         ctk.CTkButton(dialog, text = "Back", command = lambda: dialog.destroy()).grid(row = 7, column = 1, padx = 50, pady = 10)
@@ -249,19 +257,19 @@ class View(ctk.CTk):
 
         dialog.wait_window()
 
-    # Dialog box for gathering user informaiton when creating a new user
-    def entryDialog(self) -> None:
+    def crtEntryDialog(self, keys: list, title: str, displayPrv: bool = False) -> None:
         """
-        Dialog box to 'create' a new user
-
-        Will store the users information into the userInfo: dict var
+        Dialog box to gather a set of infromation from the user
+        
+        Parameters:
+            keys: A list of keys signifying what you wish to collect from the user
+            title: the title of the dialog box
+        
+        Any collected information from the user will be stored in the userInfo variable
         """
-        keys = ['username', 'password', 'email', 'city', 'state', 'zip_code']
-        self.userInfo = None            # Ensure that the userInfo var is empty
-
         # Create a custom dialog box
         dialog = tk.Toplevel(self)
-        dialog.title("Create a new user")
+        dialog.title(title)
 
         # Set a dark background for the dialog
         dialog.configure(bg = "black")
@@ -272,7 +280,15 @@ class View(ctk.CTk):
             label = ctk.CTkLabel(dialog, text=f"{key}:")
             label.grid(row=i, column = 0, padx = 10, pady = 5)
 
-            entry = ctk.CTkEntry(dialog)
+            if key == 'Password' or key == 'password':
+                entry = ctk.CTkEntry(dialog, show = "*")
+            else:
+                entry = ctk.CTkEntry(dialog)
+
+            # If displayPrv is True and the key exists in self.userInfo, set the entry value
+            if displayPrv and key in self.userInfo:
+                entry.insert(0, self.userInfo[key])
+            
             entry.grid(row = i, column = 1, padx = 10, pady = 5)
             entries[key] = entry
 

@@ -1,4 +1,4 @@
-<h1>TO-DO<h1>
+# TO-DO
 <p>
     <ul>
         <li>Fix the details popup to properly display vechile information</li>
@@ -11,5 +11,5 @@
         <ul>
             <li>Collect payment informaiton for a user / Cannot purchase without being logged in</li>
         </ul>
-    </ul>w
+    </ul>
 </p>

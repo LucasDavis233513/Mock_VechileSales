@@ -1,7 +1,8 @@
 from selenium import webdriver
 
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.firefox.service import Service as FirefoxService
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from webdriver_manager.firefox import GeckoDriverManager
 from selenium.webdriver.common.by import By
 
 
@@ -33,18 +34,14 @@ class Scraper():
         """
         """
         try:
-            s = Service(ChromeDriverManager().install())
+            s = FirefoxService(GeckoDriverManager().install())
 
-            options = webdriver.ChromeOptions()
-            options.add_experimental_option(     # Block image from rendering
-                "prefs", {
-                    "profile.managed_default_content_settings.images": 2,
-                }
-            )
+            options = FirefoxOptions()
+            options.set_preference("permissions.default.image", 2)  # Block images
             options.add_argument("--headless")   # Block the broswer from launching windows
             options.add_argument('--no-sandbox')
 
-            driver = webdriver.Chrome(service = s, options = options)
+            driver = webdriver.Firefox(service=s, options=options)
             
             return driver
         except WebDriverException as e:

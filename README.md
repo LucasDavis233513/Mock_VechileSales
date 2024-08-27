@@ -1,4 +1,6 @@
 # Mock_VechileSales
+![Main pic of the app](main.png)
+
 ## Goal
 This project aims to develop an "online" vehicle sales application. Users can browse a selection of vehicles from various sellers worldwide. In the initial view, the users will see general information about a particular vehicle, including a picture. Clicking a vehicle will present the user with additional information and seller information. Once a “purchase” has been made, the vehicle is shipped to the users; a record of the purchase is made on the user's account.
 

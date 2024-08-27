@@ -4,6 +4,22 @@
 ## Goal
 This project aims to develop an "online" vehicle sales application. Users can browse a selection of vehicles from various sellers worldwide. In the initial view, the users will see general information about a particular vehicle, including a picture. Clicking a vehicle will present the user with additional information and seller information. Once a “purchase” has been made, the vehicle is shipped to the users; a record of the purchase is made on the user's account.
 
+## TO-DO
+<p>
+    <ul>
+        <li>Fix the details popup to properly display vechile information</li>
+        <li>Implement an input buffer</li>
+        <ul>
+            <li>Have an array of images that is being filled by the background process</li>
+        </ul>
+        <li>Add a method to remove a user</li>
+        <li>Add payment functionalilty</li>
+        <ul>
+            <li>Collect payment informaiton for a user / Cannot purchase without being logged in</li>
+        </ul>
+    </ul>
+</p>
+
 ## Tech Stack
 The front end will be designed using Tkinter and customtkinter. These libraries provide a customizable interface, allowing for a user-friendly experience. To manage the interactions with the database, the psycopg2 library will be utilized through a custom command interface that provides an abstraction 
 from the SQL queries. Finally for the back end, we will be implementing a webscrapper that will be used to retrieve pictures of the vehicles. This functionality will be implemented using the selenium and retrying libraries; PIL library will be used to display these images

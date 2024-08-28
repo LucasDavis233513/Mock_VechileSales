@@ -20,6 +20,7 @@
 Bugs to be fixed<br>
 <ul>
     <li>WebDriverException Error: geckodriver unexpectedly exited. Status code was -9 (intermittent error)</li>
+    <li>Progress bar doesn't display on top of the main window</li>
 </ul>
 
 ## Goal

@@ -20,6 +20,8 @@ from retrying import retry
 import base64
 import io
 
+import platform
+
 PROGRAMMER_NAME = "Lucas Davis"
 
 class Scraper():
@@ -34,7 +36,16 @@ class Scraper():
         """
         """
         try:
-            s = FirefoxService(GeckoDriverManager().install())
+            os = platform.system()
+
+            if (os == "Linux"):
+                s = FirefoxService("gekodriver/geckodriver_linux")
+            elif (os == "Darwin"):
+                s = FirefoxService("gekodriver/geckodriver_macOS")
+            elif (os == "Win32"):
+                s = FirefoxService("gekodriver/geckodriver.exe")
+            else:
+                raise Exception("Unsupported OS version")
 
             options = FirefoxOptions()
             options.set_preference("permissions.default.image", 2)  # Block images

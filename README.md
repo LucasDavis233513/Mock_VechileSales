@@ -2,20 +2,25 @@
 ![Main pic of the app](main.png)
 
 ## TO-DO
-<p>
+<ul>
+    <li>Fix the details popup to properly display vechile information</li>
+    <li>Implement an input buffer</li>
     <ul>
-        <li>Fix the details popup to properly display vechile information</li>
-        <li>Implement an input buffer</li>
-        <ul>
-            <li>Have an array of images that is being filled by the background process</li>
-        </ul>
-        <li>Add a method to remove a user</li>
-        <li>Add payment functionalilty</li>
-        <ul>
-            <li>Collect payment informaiton for a user / Cannot purchase without being logged in</li>
-        </ul>
+        <li>Have an array of images that is being filled by the background process</li>
     </ul>
-</p>
+    <li>Add a method to remove a user</li>
+    <li>Add payment functionalilty</li>
+    <ul>
+        <li>Collect payment informaiton for a user / Cannot purchase without being logged in</li>
+    </ul>
+    <li>Fix the bugs in the next section.</li>
+</ul>
+
+## Bugs
+Bugs to be fixed<br>
+<ul>
+    <li>WebDriverException Error: geckodriver unexpectedly exited. Status code was -9 (intermittent error)</li>
+</ul>
 
 ## Goal
 This project aims to develop an "online" vehicle sales application. Users can browse a selection of vehicles from various sellers worldwide. In the initial view, the users will see general information about a particular vehicle, including a picture. Clicking a vehicle will present the user with additional information and seller information. Once a “purchase” has been made, the vehicle is shipped to the users; a record of the purchase is made on the user's account.
